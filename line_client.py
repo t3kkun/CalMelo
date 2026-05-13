@@ -34,3 +34,15 @@ def broadcast_messages(channel_access_token, messages):
         "https://api.line.me/v2/bot/message/broadcast",
         payload
     )
+
+def push_messages(channel_access_token, to, messages):
+    payload = {
+        "to": to,
+        "messages": messages
+    }
+
+    _post(
+        channel_access_token,
+        "https://api.line.me/v2/bot/message/push",
+        payload
+    )
