@@ -1,14 +1,11 @@
-import copy
-import datetime
-from zoneinfo import ZoneInfo
-
-
-JST = ZoneInfo("Asia/Tokyo")
+from copy import deepcopy
+from datetime import datetime
 
 
 FLEX_TEMPLATE = {
     "type": "bubble",
     "size": "deca",
+
     "body": {
         "type": "box",
         "layout": "vertical",
@@ -18,12 +15,12 @@ FLEX_TEMPLATE = {
                 "layout": "vertical",
                 "contents": [
                     {
-                        "text": "",
                         "type": "text",
+                        "text": "",
                         "color": "#FFFFFF",
                         "weight": "bold",
                         "align": "start",
-                        "gravity":"center",
+                        "gravity": "center",
                         "wrap": True,
                         "size": "lg",
                         "margin": "lg"
@@ -34,6 +31,7 @@ FLEX_TEMPLATE = {
                 "paddingEnd": "15px",
                 "paddingBottom": "md"
             },
+
             {
                 "type": "box",
                 "layout": "vertical",
@@ -47,113 +45,118 @@ FLEX_TEMPLATE = {
         ],
         "paddingAll": "0px",
         "cornerRadius": "md"
+    },
+
+    "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+        {
+            "type": "separator"
+        },
+        {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "style": "link",
+                        "height": "sm",
+                        "action": {
+                            "type": "uri",
+                            "label": "GitHub",
+                            "uri": "https://github.com/t3kkun/CalMelo?openExternalBrowser=1"
+                        }
+                    },
+                    {
+                        "type": "button",
+                        "style": "link",
+                        "height": "sm",
+                        "action": {
+                            "type": "uri",
+                            "label": "note",
+                            "uri": "https://note.com/t3kkun?openExternalBrowser=1"
+                        }
+                    }
+                ],
+                "margin": "md"
+            }
+        ]
     }
 }
 
 
-def event_to_view_model(event):
-    start = event["start"]
-    end = event["end"]
-
-    is_all_day = "date" in start
-
-    if is_all_day:
-        date_str = start["date"]
-
-        start_time = "終日"
-        end_time = "終日"
-
-    else:
-        start_dt = datetime.datetime.fromisoformat(
-            start["dateTime"]
-        ).astimezone(JST)
-
-        end_dt = datetime.datetime.fromisoformat(
-            end["dateTime"]
-        ).astimezone(JST)
-
-        date_str = start_dt.strftime("%Y/%m/%d")
-
-        start_time = start_dt.strftime("%H:%M")
-        end_time = end_dt.strftime("%H:%M")
-
-    return {
-        "title": event.get("summary", "(no title)"),
-        "date": date_str,
-        "start_time": start_time,
-        "end_time": end_time,
-        "description": event.get("description", "")
-    }
+def parse_datetime(dt_str):
+    return datetime.fromisoformat(
+        dt_str.replace("Z", "+00:00")
+    )
 
 
-def build_info_row(label, value):
-    return {
-        "type": "box",
-        "layout": "baseline",
-        "spacing": "sm",
-        "contents": [
+def create_event_flex(event):
+    bubble = deepcopy(FLEX_TEMPLATE)
+
+    title = event.get("summary", "No Title")
+
+    start_raw = event["start"]["dateTime"]
+    end_raw = event["end"]["dateTime"]
+
+    start = parse_datetime(start_raw)
+    end = parse_datetime(end_raw)
+
+    start_time = start.strftime("%H:%M")
+    end_time = end.strftime("%H:%M")
+
+    date = start.strftime("%Y/%m/%d")
+
+    description = event.get("description", "")
+
+    # title
+    bubble["body"]["contents"][0]["contents"][0]["text"] = title
+
+    detail_contents = [
+        {
+            "type": "text",
+            "text": f"日付：{date}",
+            "weight": "bold",
+            "wrap": True
+        },
+        {
+            "type": "text",
+            "text": f"開始時刻：{start_time}",
+            "weight": "bold",
+            "wrap": True
+        },
+        {
+            "type": "text",
+            "text": f"終了時刻：{end_time}",
+            "weight": "bold",
+            "wrap": True
+        }
+    ]
+
+    if description:
+        detail_contents.extend([
             {
-                "type": "text",
-                "text": label,
-                "color": "#888888",
-                "size": "sm",
-                "flex": 2
+                "type": "separator",
+                "margin": "lg"
             },
             {
                 "type": "text",
-                "text": value,
+                "text": description,
                 "wrap": True,
-                "size": "sm",
-                "flex": 5
+                "margin": "lg"
             }
-        ]
-    }
+        ])
 
-
-def build_event_flex(view_model):
-    bubble = copy.deepcopy(FLEX_TEMPLATE)
-
-    header_text = bubble["body"]["contents"][0]["contents"][0]
-    body_contents = bubble["body"]["contents"][1]["contents"]
-
-    header_text["text"] = view_model["title"]
-
-    body_contents.extend([
-        build_info_row("日付", view_model["date"]),
-        build_info_row("開始", view_model["start_time"]),
-        build_info_row("終了", view_model["end_time"]),
-    ])
-
-    description = view_model["description"].strip()
-
-    if description:
-        body_contents.append({
-            "type": "separator",
-            "margin": "md"
-        })
-
-        body_contents.append({
-            "type": "text",
-            "text": description[:300],
-            "wrap": True,
-            "size": "sm",
-            "margin": "md"
-        })
+    bubble["body"]["contents"][1]["contents"] = detail_contents
 
     return {
         "type": "flex",
-        "altText": view_model["title"],
+        "altText": f"予定: {title}",
         "contents": bubble
     }
 
 
 def events_to_flex_messages(events):
-    view_models = [
-        event_to_view_model(event)
-        for event in events
-    ]
-
-    return [
-        build_event_flex(vm)
-        for vm in view_models
-    ]
+    return [create_event_flex(event) for event in events]
