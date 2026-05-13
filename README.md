@@ -10,7 +10,7 @@ Google Calendar reminder bot for LINE Messaging API.
 
 ## Setup
 ```bash
-uv sync
+uv venv .
 ```
 ## Run
 ```bash
