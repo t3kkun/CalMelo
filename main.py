@@ -2,7 +2,7 @@ from config_loader import load_json
 
 from gcal_client import fetch_tomorrow_events
 from formatter import events_to_flex_messages
-from line_client import broadcast_messages
+from line_client import push_messages
 
 
 GCAL_CREDENTIALS = "credentials/gcal.json"
@@ -23,8 +23,9 @@ def main():
 
     messages = events_to_flex_messages(events)
 
-    broadcast_messages(
+    push_messages(
         channel_access_token=line_config["channel_access_token"],
+        to=line_config["to"],
         messages=messages
     )
 
